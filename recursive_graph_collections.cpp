@@ -210,7 +210,7 @@ bool cxx::rgc_graph_delete_edge(long id, char const *name, int x, int y) {
 	return true;
 }
 
-int rgc_first_edge(long id, char const *name, int x) {
+int cxx::rgc_first_edge(long id, char const *name, int x) {
 	if (!graph_exists(id, name)) {
 		return -1;
 	}
@@ -224,7 +224,7 @@ int rgc_first_edge(long id, char const *name, int x) {
 	return *adj_map[x].begin();
 }
 
-int rgc_next_edge(long id, char const *name, int x, int y) {
+int cxx::rgc_next_edge(long id, char const *name, int x, int y) {
 	if (!graph_exists(id, name)) {
 		return -1;
 	}
@@ -238,7 +238,7 @@ int rgc_next_edge(long id, char const *name, int x, int y) {
 	return (next == adj_map[x].end()) ? -1 : *next;
 }
 
-ssize_t rgc_edge_level(long id, char const *name, int x, int y) {
+ssize_t cxx::rgc_edge_level(long id, char const *name, int x, int y) {
 	if (!graph_exists(id, name)) {
 		return -1;
 	}
@@ -253,18 +253,18 @@ ssize_t rgc_edge_level(long id, char const *name, int x, int y) {
 	return edge_set.second[edge];
 }
 
-ssize_t rgc_graph_level(long id, char const *name) {
+ssize_t cxx::rgc_graph_level(long id, char const *name) {
 	return 0; // stub
 }
 
-ssize_t rgc_max_level() {
+ssize_t cxx::rgc_max_level() {
 	return LEVEL_MAX - 1;
 }
 
-ssize_t rgc_count_nodes(long id, char const *name) {
+ssize_t cxx::rgc_count_nodes(long id, char const *name) {
 	return graph_exists(id, name) ? collections[id][name].first.size() : -1;
 }
 
-ssize_t rgc_count_edges(long id, char const *name) {
+ssize_t cxx::rgc_count_edges(long id, char const *name) {
 	return 0; // stub
 }
