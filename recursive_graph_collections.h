@@ -31,7 +31,7 @@ namespace cxx {
 
 	// do przetestowania
 	int rgc_first_node(long id, char const *name);
-	
+
 	// do przetestowania
 	int rgc_next_node(long id, char const *name, int x);
 
@@ -41,9 +41,7 @@ namespace cxx {
 	// do przetestowania
 	int rgc_next_edge(long id, char const *name, int x, int y);
 
-	/* START : OPERATIONS ON GRAPHS INSIDE COLLECTIONS
-
-	// Big scary graph for edge injection.
+  /*
 	bool rgc_replace_edge(
 		long id,
 		char const *result_name,
@@ -54,8 +52,7 @@ namespace cxx {
 		int v_1,
 		int v_2
 	);
-
-	END : OPERATIONS ON GRAPHS INSIDE COLLECTIONS */
+  */
 
 	// do przetestowania
 	ssize_t rgc_edge_level(long id, char const *name, int x, int y);

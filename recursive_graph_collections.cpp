@@ -7,6 +7,7 @@
 #include <climits>
 #include <cctype>
 #include <algorithm>
+#include <sys/types.h>
 
 #include "recursive_graph_collections.h"
 
@@ -128,7 +129,6 @@ int cxx::rgc_graph_new_node(long id, char const *name) {
 		return -1;
 	}
 
-	// TODO: czy da sie lepiej?
 	node_t expected = 0;
 	for (node_t node : nodes) {
 		if (node != expected) {
@@ -171,15 +171,6 @@ int cxx::rgc_next_node(long id, char const *name, int x) {
 
 	return (next == nodes.end()) ? -1 : *next;
 }
-
-/*
-	using node_t = int;
-	using level_t = size_t;
-	using edge_t = std::pair<node_t, node_t>;
-	using edge_set_t = std::pair<std::map<node_t, std::set<node_t>>, std::map<edge_t, level_t>>;
-	using graph_t = std::pair<std::set<node_t>, edge_set_t>;
-	using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
- */
 
 bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
 	if (!graph_exists(id, name)) {
