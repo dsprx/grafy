@@ -8,6 +8,7 @@
 #include <cctype>
 #include <algorithm>
 #include <sys/types.h>
+#include <limits.h>
 
 #include "recursive_graph_collections.h"
 
@@ -48,14 +49,14 @@ namespace {
 // Creates a new empty graph collection and assigns it an id. Returns the
 // id of the newly created collection or -1 if no more id's are available.
 long cxx::rgc_new_collection() {
-	static long next_collection_id = 0;
+	static long last_collection_id{-1};
 
-	if (LONG_MAX - next_collection_id == 0) {
+	if (last_collection_id == LONG_MAX) {
 		return -1;
 	}
-
-	collections.try_emplace(next_collection_id);
-	return next_collection_id++;
+    ++last_collection_id;
+	collections.try_emplace(last_collection_id);
+	return last_collection_id;
 }
 
 // Deletes the graph collection with a specified id (if one exists).
