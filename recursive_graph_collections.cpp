@@ -65,20 +65,22 @@ void cxx::rgc_delete_collection(long id) {
 }
 
 bool cxx::rgc_new_graph(long id, char const *name, int n) {
-	if (!graph_exists(id, name)) {
-		return false;
-	}
+    auto collection_iter = collections.find(id);
+    if (!is_valid_graph_name(name) || n < 0 || collection_iter == collections.end()) {
+        return false;
+    }
+    auto [graph_iter, inserted] = collection_iter->second.try_emplace(name);
+    if (!inserted) {
+        return false;
+    }
+    auto& nodes = graph_iter->second.first;
 
-	graph_t new_graph;
-	auto hint = new_graph.first.begin();
+    for (node_t i = 0; i < n; i++) {
+        // Use emplace_hint() instead of emplace() for faster sequential insertions.
+        nodes.emplace_hint(nodes.end(), i);
+    }
 
-	for (node_t i = 0; i < n; i++) {
-		// Use emplace_hint() instead of emplace() for faster sequential insertions.
-		hint = new_graph.first.emplace_hint(hint, i);
-	}
-
-	collections[id].try_emplace(name, new_graph);
-	return true;
+    return true;
 }
 
 // Deletes graph 'name' from the collection with specified id. If no such graph
