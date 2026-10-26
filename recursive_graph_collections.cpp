@@ -67,6 +67,38 @@ namespace {
 		return edge_set.first.contains(edge.first) &&
 					 edge_set.first[edge.first].contains(edge.second);
 	}
+
+    // helper function for finding collection,
+    // returns nullptr on failure
+    graph_collection_t* find_collection(long id) {
+        auto all_collections = collections();
+        auto iter = all_collections.find(id);
+        if (iter == all_collections.end()) {
+            return nullptr;
+        }
+        return &iter->second;
+    }
+
+    // helper functions for finding graph,
+    // returns nullptr on failure
+    graph_t* find_graph(graph_collection_t& collection, char const *name) {
+        if (name == nullptr) {
+            return nullptr;
+        }
+        auto iter = collection.find(name);
+        if (iter == collection.end()) {
+            return nullptr;
+        }
+        return &iter->second;
+    }
+
+    graph_t* find_graph(long id, char const *name) {
+        auto collection = find_collection(id);
+        if (pointer == nullptr) {
+            return nullptr;
+        }
+        return find_graph(*collection, name);
+    }
 }
 
 // Creates a new empty graph collection and assigns it an id. Returns the
