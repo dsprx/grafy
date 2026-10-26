@@ -1,17 +1,14 @@
 #include <utility>
 #include <set>
 #include <map>
-#include <cstring>
 #include <cstddef>
 #include <string>
 #include <climits>
-#include <cctype>
 #include <algorithm>
-#include <sys/types.h>
-#include <limits.h>
 #include <string_view>
 #include <unordered_map>
 #include <tuple>
+#include <ranges>
 
 #include "recursive_graph_collections.h"
 
@@ -71,7 +68,7 @@ namespace {
     // helper function for finding collection,
     // returns nullptr on failure
     graph_collection_t* find_collection(long id) {
-        auto all_collections = collections();
+        auto& all_collections = collections();
         auto iter = all_collections.find(id);
         if (iter == all_collections.end()) {
             return nullptr;
