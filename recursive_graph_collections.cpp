@@ -11,6 +11,7 @@
 #include <limits.h>
 #include <string_view>
 #include <unordered_map>
+#include <tuple>
 
 #include "recursive_graph_collections.h"
 
@@ -19,13 +20,21 @@
 #endif
 
 namespace {
-	using node_t = int;
-	using level_t = size_t;
-	using edge_t = std::pair<node_t, node_t>;
-	using edge_set_t = std::pair<std::map<node_t, std::set<node_t>>, std::map<edge_t, level_t>>;
-	using graph_t = std::pair<std::set<node_t>, edge_set_t>;
-	using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
+    static_assert(LEVEL_MAX > 0, "LEVEL_MAX must be a positive number");
+
+    using node_t = int;
+    using level_t = std::size_t;
+    using edge_t = std::pair<node_t, node_t>; // {min, max}
+    using node_set_t = std::set<node_t>;
+    using adjacency_t = std::map<node_t, node_set_t>; // neighbours saved in both directions
+    using edge_levels_t = std::map<edge_t, level_t>; // level of each edge, one entry per edge
+    using graph_t = std::tuple<node_set_t, adjacency_t, edge_levels_t>;
+    using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
     using collections_t = std::unordered_map<long, graph_collection_t>;
+
+    // indices for use with std::get on graph_t tuple
+    constexpr std::size_t NODES{0uz}, ADJACENCY{1uz}, EDGE_LEVELS{2uz};
+    constexpr level_t BASE_LEVEL{0uz};
 
     collections_t& collections() {
         static collections_t all_collections;
