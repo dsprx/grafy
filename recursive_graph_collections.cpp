@@ -8,6 +8,8 @@
 #include <cctype>
 #include <algorithm>
 #include <sys/types.h>
+#include <limits.h>
+#include <string_view>
 
 #include "recursive_graph_collections.h"
 
@@ -25,9 +27,17 @@ namespace {
 
 	std::map<long, graph_collection_t> collections;
 
-	bool is_valid_graph_name(const std::string& name) {
-		return std::all_of(name.begin(), name.end(), [](char c) {
-			return std::isalnum(c) || c == '_';
+	bool is_valid_graph_name(char const *name) {
+        if (name == nullptr) {
+            return false;
+        }
+        std::string_view name_view{name};
+        if (name_view.empty()) {
+            return false;
+        }
+		return std::all_of(name_view.begin(), name_view.end(), [](char c) {
+			return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
+                   ('0' <= c && c <= '9') || c == '_';
 		});
 	}
 
@@ -48,14 +58,14 @@ namespace {
 // Creates a new empty graph collection and assigns it an id. Returns the
 // id of the newly created collection or -1 if no more id's are available.
 long cxx::rgc_new_collection() {
-	static long next_collection_id = 0;
+	static long last_collection_id{-1};
 
-	if (LONG_MAX - next_collection_id == 0) {
+	if (last_collection_id == LONG_MAX) {
 		return -1;
 	}
-
-	collections.try_emplace(next_collection_id);
-	return next_collection_id++;
+    ++last_collection_id;
+	collections.try_emplace(last_collection_id);
+	return last_collection_id;
 }
 
 // Deletes the graph collection with a specified id (if one exists).
@@ -64,20 +74,22 @@ void cxx::rgc_delete_collection(long id) {
 }
 
 bool cxx::rgc_new_graph(long id, char const *name, int n) {
-	if (!graph_exists(id, name)) {
-		return false;
-	}
+    auto collection_iter = collections.find(id);
+    if (!is_valid_graph_name(name) || n < 0 || collection_iter == collections.end()) {
+        return false;
+    }
+    auto [graph_iter, inserted] = collection_iter->second.try_emplace(name);
+    if (!inserted) {
+        return false;
+    }
+    auto& nodes = graph_iter->second.first;
 
-	graph_t new_graph;
-	auto hint = new_graph.first.begin();
+    for (node_t i = 0; i < n; i++) {
+        // Use emplace_hint() instead of emplace() for faster sequential insertions.
+        nodes.emplace_hint(nodes.end(), i);
+    }
 
-	for (node_t i = 0; i < n; i++) {
-		// Use emplace_hint() instead of emplace() for faster sequential insertions.
-		hint = new_graph.first.emplace_hint(hint, i);
-	}
-
-	collections[id].try_emplace(name, new_graph);
-	return true;
+    return true;
 }
 
 // Deletes graph 'name' from the collection with specified id. If no such graph
