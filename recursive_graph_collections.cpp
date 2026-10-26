@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <sys/types.h>
 #include <limits.h>
+#include <string_view>
 
 #include "recursive_graph_collections.h"
 
@@ -26,9 +27,17 @@ namespace {
 
 	std::map<long, graph_collection_t> collections;
 
-	bool is_valid_graph_name(const std::string& name) {
-		return std::all_of(name.begin(), name.end(), [](char c) {
-			return std::isalnum(c) || c == '_';
+	bool is_valid_graph_name(char const *name) {
+        if (name == nullptr) {
+            return false;
+        }
+        std::string_view name_view{name};
+        if (name_view.empty()) {
+            return false;
+        }
+		return std::all_of(name_view.begin(), name_view.end(), [](char c) {
+			return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') ||
+                   ('0' <= c && c <= '9') || c == '_';
 		});
 	}
 
