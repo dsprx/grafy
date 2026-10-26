@@ -52,19 +52,6 @@ namespace {
 		});
 	}
 
-	bool collection_exists(long id) {
-		return collections().contains(id);
-	}
-
-	bool graph_exists(long id, const char *name) {
-		return name && collection_exists(id) && collections()[id].contains(name);
-	}
-
-	bool edge_exists(const edge_set_t& edge_set, const edge_t& edge) {
-		return edge_set.first.contains(edge.first) &&
-					 edge_set.first[edge.first].contains(edge.second);
-	}
-
     // helper function for finding collection,
     // returns nullptr on failure
     graph_collection_t* find_collection(long id) {
@@ -95,6 +82,65 @@ namespace {
             return nullptr;
         }
         return find_graph(*collection, name);
+    }
+
+    edge_t make_edge(node_t x, node_t y) {
+        return {std::min(x, y), std::max(x, y)};
+    }
+
+    // inserts edge with given level, assumes x != y, and both nodes exist
+    // returns false if edge exists
+    bool insert_edge(graph_t& graph, node_t x, node_t y, level_t level) {
+        auto& [nodes, adjacency, edge_levels] = graph;
+        auto [iter, inserted] = edge_levels.emplace(make_edge(x, y), level);
+        if (!inserted) {
+            return false;
+        }
+        adjacency[x].emplace(y);
+        adjacency[y].emplace(x);
+        return true;
+    }
+
+    // erases y from x's neighbours
+    // if x's neighbours is empty after erasing, removes x's entry
+    void erase_neighbour(adjacency_t& adj, node_t x, node_t y) {
+        auto iter = adj.find(x);
+        iter->second.erase(y);
+        if (iter->second.empty()) {
+            adj.erase(iter);
+        }
+    }
+
+    // deletes edge {x,y}
+    // returns false if edge did not exist
+    bool erase_edge(graph_t& graph, node_t x, node_t y) {
+        auto& [nodes, adjacency, edge_levels] = graph;
+        if (edge_levels.erase(make_edge(x, y)) == 0) {
+            return false;
+        }
+        erase_neighbour(adjacency, x, y);
+        erase_neighbour(adjacency, y, x);
+        return true;
+    }
+
+    // returns biggest edge_level or BASE_LEVEL if no edges
+    level_t graph_level(const graph_t& graph) {
+        const auto& edge_levels = std::get<EDGE_LEVELS>(graph);
+        if (edge_levels.empty()) {
+            return BASE_LEVEL;
+        }
+        return std::ranges::max(edge_levels | std::views::values);
+    }
+
+    // inserts smallest number >= candidate into the set that is not present in it
+    node_t take_free_node (node_set_t& nodes, node_t candidate) {
+        auto iter = nodes.lower_bound(candidate);
+        while (iter != nodes.end() && *iter == candidate) {
+            ++iter;
+            ++candidate;
+        }
+        nodes.emplace_hint(iter, candidate);
+        return candidate;
     }
 }
 
