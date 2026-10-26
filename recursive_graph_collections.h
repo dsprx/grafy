@@ -1,6 +1,6 @@
 #ifndef RECURSIVE_GRAPH_COLLECTIONS_H_
 #define RECURSIVE_GRAPH_COLLECTIONS_H_
-
+#include <sys/types.h>
 #ifdef __cplusplus
 namespace cxx {
 	extern "C" {
