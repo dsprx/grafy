@@ -1,16 +1,14 @@
 #include <utility>
 #include <set>
 #include <map>
-#include <cstring>
 #include <cstddef>
 #include <string>
 #include <climits>
-#include <cctype>
 #include <algorithm>
-#include <sys/types.h>
-#include <limits.h>
 #include <string_view>
 #include <unordered_map>
+#include <tuple>
+#include <ranges>
 
 #include "recursive_graph_collections.h"
 
@@ -19,13 +17,21 @@
 #endif
 
 namespace {
-	using node_t = int;
-	using level_t = size_t;
-	using edge_t = std::pair<node_t, node_t>;
-	using edge_set_t = std::pair<std::map<node_t, std::set<node_t>>, std::map<edge_t, level_t>>;
-	using graph_t = std::pair<std::set<node_t>, edge_set_t>;
-	using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
+    static_assert(LEVEL_MAX > 0, "LEVEL_MAX must be a positive number");
+
+    using node_t = int;
+    using level_t = std::size_t;
+    using edge_t = std::pair<node_t, node_t>; // {min, max}
+    using node_set_t = std::set<node_t>;
+    using adjacency_t = std::map<node_t, node_set_t>; // neighbours saved in both directions
+    using edge_levels_t = std::map<edge_t, level_t>; // level of each edge, one entry per edge
+    using graph_t = std::tuple<node_set_t, adjacency_t, edge_levels_t>;
+    using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
     using collections_t = std::unordered_map<long, graph_collection_t>;
+
+    // indices for use with std::get on graph_t tuple
+    constexpr std::size_t NODES{0uz}, ADJACENCY{1uz}, EDGE_LEVELS{2uz};
+    constexpr level_t BASE_LEVEL{0uz};
 
     collections_t& collections() {
         static collections_t all_collections;
@@ -46,18 +52,96 @@ namespace {
 		});
 	}
 
-	bool collection_exists(long id) {
-		return collections().contains(id);
-	}
+    // helper function for finding collection,
+    // returns nullptr on failure
+    graph_collection_t* find_collection(long id) {
+        auto& all_collections = collections();
+        auto iter = all_collections.find(id);
+        if (iter == all_collections.end()) {
+            return nullptr;
+        }
+        return &iter->second;
+    }
 
-	bool graph_exists(long id, const char *name) {
-		return name && collection_exists(id) && collections()[id].contains(name);
-	}
+    // helper functions for finding graph,
+    // returns nullptr on failure
+    graph_t* find_graph(graph_collection_t& collection, char const *name) {
+        if (name == nullptr) {
+            return nullptr;
+        }
+        auto iter = collection.find(name);
+        if (iter == collection.end()) {
+            return nullptr;
+        }
+        return &iter->second;
+    }
 
-	bool edge_exists(const edge_set_t& edge_set, const edge_t& edge) {
-		return edge_set.first.contains(edge.first) &&
-					 edge_set.first[edge.first].contains(edge.second);
-	}
+    graph_t* find_graph(long id, char const *name) {
+        auto collection = find_collection(id);
+        if (pointer == nullptr) {
+            return nullptr;
+        }
+        return find_graph(*collection, name);
+    }
+
+    edge_t make_edge(node_t x, node_t y) {
+        return {std::min(x, y), std::max(x, y)};
+    }
+
+    // inserts edge with given level, assumes x != y, and both nodes exist
+    // returns false if edge exists
+    bool insert_edge(graph_t& graph, node_t x, node_t y, level_t level) {
+        auto& [nodes, adjacency, edge_levels] = graph;
+        auto [iter, inserted] = edge_levels.emplace(make_edge(x, y), level);
+        if (!inserted) {
+            return false;
+        }
+        adjacency[x].emplace(y);
+        adjacency[y].emplace(x);
+        return true;
+    }
+
+    // erases y from x's neighbours
+    // if x's neighbours is empty after erasing, removes x's entry
+    void erase_neighbour(adjacency_t& adj, node_t x, node_t y) {
+        auto iter = adj.find(x);
+        iter->second.erase(y);
+        if (iter->second.empty()) {
+            adj.erase(iter);
+        }
+    }
+
+    // deletes edge {x,y}
+    // returns false if edge did not exist
+    bool erase_edge(graph_t& graph, node_t x, node_t y) {
+        auto& [nodes, adjacency, edge_levels] = graph;
+        if (edge_levels.erase(make_edge(x, y)) == 0) {
+            return false;
+        }
+        erase_neighbour(adjacency, x, y);
+        erase_neighbour(adjacency, y, x);
+        return true;
+    }
+
+    // returns biggest edge_level or BASE_LEVEL if no edges
+    level_t graph_level(const graph_t& graph) {
+        const auto& edge_levels = std::get<EDGE_LEVELS>(graph);
+        if (edge_levels.empty()) {
+            return BASE_LEVEL;
+        }
+        return std::ranges::max(edge_levels | std::views::values);
+    }
+
+    // inserts smallest number >= candidate into the set that is not present in it
+    node_t take_free_node (node_set_t& nodes, node_t candidate) {
+        auto iter = nodes.lower_bound(candidate);
+        while (iter != nodes.end() && *iter == candidate) {
+            ++iter;
+            ++candidate;
+        }
+        nodes.emplace_hint(iter, candidate);
+        return candidate;
+    }
 }
 
 // Creates a new empty graph collection and assigns it an id. Returns the
