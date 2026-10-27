@@ -78,7 +78,7 @@ graph_t *find_graph(graph_collection_t &collection, char const *name) {
 
 graph_t *find_graph(long id, char const *name) {
     auto collection = find_collection(id);
-    if (pointer == nullptr) {
+    if (collection == nullptr) {
         return nullptr;
     }
     return find_graph(*collection, name);
@@ -171,7 +171,7 @@ bool cxx::rgc_new_graph(long id, char const *name, int n) {
     if (!inserted) {
         return false;
     }
-    auto &nodes = graph_iter->second.first;
+    auto &nodes = std::get<NODES>(graph_iter->second);
 
     for (node_t i = 0; i < n; i++) {
         // Use emplace_hint() instead of emplace() for faster sequential insertions.
@@ -184,37 +184,40 @@ bool cxx::rgc_new_graph(long id, char const *name, int n) {
 // Deletes graph 'name' from the collection with specified id. If no such graph
 // or no such collection exist, then the function does nothing.
 void cxx::rgc_delete_graph(long id, char const *name) {
-    if (name && collection_exists(id)) {
-        collections()[id].erase(name);
+    graph_collection_t *collection = find_collection(id);
+    if (collection != nullptr && name) {
+        collection->erase(name);
     }
 }
 
 // Returns a pointer to the name of the first graph in a collection with
 // the specified id. Returns nullptr if the collection doesn't exist or is empty.
 char const *cxx::rgc_first_graph(long id) {
-    if (collection_exists(id) && !collections()[id].empty()) {
-        return collections()[id].begin()->first.c_str();
+    graph_collection_t *collection = find_collection(id);
+    if (collection == nullptr || collection->empty()) {
+        return nullptr;
     }
-
-    return nullptr;
+    return collection->begin()->first.c_str();
 }
 
 // Returns a pointer to the name of the first graph after graph 'name' in
 // a collection with the specified id. Returns nullptr if no such graph
 // or collection exists.
 char const *cxx::rgc_next_graph(long id, char const *name) {
-    if (!graph_exists(id, name)) {
-        return nullptr;
+    graph_collection_t *collection = find_collection(id);
+    if (collection != nullptr && name) {
+        auto next = collection->upper_bound(name);
+        return (next == collection->end()) ? nullptr : next->first.c_str();
     }
 
-    auto next = collections()[id].upper_bound(name);
-    return (next == collections()[id].end()) ? nullptr : next->first.c_str();
+    return nullptr;
 }
 
 // Gives the number of graphs in the collection with specified id. Returns -1
 // if no such collection exists.
 ssize_t cxx::rgc_size(long id) {
-    return (collection_exists(id)) ? collections()[id].size() : -1;
+    graph_collection_t *collection = find_collection(id);
+    return (collection == nullptr) ? -1 : static_cast<ssize_t>(collection->size());
 }
 
 // Creates a new node with the smallest free number in the specified graph.
