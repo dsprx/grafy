@@ -163,11 +163,11 @@ void cxx::rgc_delete_collection(long id) {
 }
 
 bool cxx::rgc_new_graph(long id, char const *name, int n) {
-    auto collection_iter = collections().find(id);
-    if (!is_valid_graph_name(name) || n < 0 || collection_iter == collections().end()) {
+    graph_collection_t *collection = find_collection(id);
+    if (!is_valid_graph_name(name) || n < 0 || collection == nullptr) {
         return false;
     }
-    auto [graph_iter, inserted] = collection_iter->second.try_emplace(name);
+    auto [graph_iter, inserted] = collection->try_emplace(name);
     if (!inserted) {
         return false;
     }
@@ -205,12 +205,16 @@ char const *cxx::rgc_first_graph(long id) {
 // or collection exists.
 char const *cxx::rgc_next_graph(long id, char const *name) {
     graph_collection_t *collection = find_collection(id);
-    if (collection == nullptr || find_graph(*collection, name) == nullptr) {
+    if (collection == nullptr || name == nullptr) {
         return nullptr;
     }
+    auto iter = collection->find(name);
+    if (iter == collection->end()) {
+        return nullptr;
+    }
+    ++iter;
 
-    auto next = collection->upper_bound(name);
-    return (next == collection->end()) ? nullptr : next->first.c_str();
+    return (iter == collection->end()) ? nullptr : iter->first.c_str();
 }
 
 // Gives the number of graphs in the collection with specified id. Returns -1
