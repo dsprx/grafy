@@ -41,18 +41,16 @@ namespace cxx {
 	// do przetestowania
 	int rgc_next_edge(long id, char const *name, int x, int y);
 
-  /*
 	bool rgc_replace_edge(
 		long id,
 		char const *result_name,
 		char const *recipient_name,
-		int w1,
-		int w2,
+		int w_1,
+		int w_2,
 		char const *donor_name,
 		int v_1,
 		int v_2
 	);
-  */
 
 	// do przetestowania
 	ssize_t rgc_edge_level(long id, char const *name, int x, int y);
