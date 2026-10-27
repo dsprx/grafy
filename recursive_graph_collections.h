@@ -1,6 +1,8 @@
 #ifndef RECURSIVE_GRAPH_COLLECTIONS_H_
 #define RECURSIVE_GRAPH_COLLECTIONS_H_
+
 #include <sys/types.h>
+
 #ifdef __cplusplus
 namespace cxx {
 	extern "C" {
@@ -13,32 +15,24 @@ namespace cxx {
 
 	void rgc_delete_graph(long id, char const *name);
 
-	// do przetestowania
 	int rgc_graph_new_node(long id, char const *name);
 
-	// do przetestowania
 	bool rgc_graph_delete_node(long id, char const *name, int x);
 
-	// do przetestowania
 	bool rgc_graph_add_edge(long id, char const *name, int x, int y);
 
-	// do przetestowania
 	bool rgc_graph_delete_edge(long id, char const *name, int x, int y);
 
 	char const *rgc_first_graph(long id);
 
 	char const *rgc_next_graph(long id, char const *name);
 
-	// do przetestowania
 	int rgc_first_node(long id, char const *name);
 
-	// do przetestowania
 	int rgc_next_node(long id, char const *name, int x);
 
-	// do przetestowania
 	int rgc_first_edge(long id, char const *name, int x);
 
-	// do przetestowania
 	int rgc_next_edge(long id, char const *name, int x, int y);
 
 	bool rgc_replace_edge(
@@ -52,19 +46,14 @@ namespace cxx {
 		int v_2
 	);
 
-	// do przetestowania
 	ssize_t rgc_edge_level(long id, char const *name, int x, int y);
 
-	// do przetestowania
 	ssize_t rgc_graph_level(long id, char const *name);
 
-	// do przetestowania
 	ssize_t rgc_max_level();
 
-	// do przetestowania
 	ssize_t rgc_count_nodes(long id, char const *name);
 
-	// do przetestowania
 	ssize_t rgc_count_edges(long id, char const *name);
 
 	ssize_t rgc_size(long id);
