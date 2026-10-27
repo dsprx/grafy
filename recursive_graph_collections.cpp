@@ -28,6 +28,7 @@ using edge_levels_t = std::map<edge_t, level_t>;  // Level of each edge, one ent
 using graph_t = std::tuple<node_set_t, adjacency_t, edge_levels_t>;
 using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
 using collections_t = std::unordered_map<long, graph_collection_t>;
+using node_mapping_t = std::map<node_t, node_t>; // donor_node -> result_node.
 
 // Indices for use with std::get on graph_t tuple.
 constexpr std::size_t NODES{0uz}, ADJACENCY{1uz}, EDGE_LEVELS{2uz};
@@ -359,6 +360,73 @@ int cxx::rgc_next_edge(long id, char const *name, int x, int y) {
 
     auto next = neighbours->second.upper_bound(y);
     return (next == neighbours->second.end()) ? -1 : *next;
+}
+
+// Creates graph 'result_name' by replacing edge {w_1, w_2} of the recipient
+// with the donor, whose nodes v_1, v_2 are identified with w_1, w_2. New edges
+// get level max(donor level, replaced edge level) + 1. Returns false if any
+// graph or node is missing, the result name is invalid or taken, or the result
+// would exceed the maximal level or INT_MAX nodes.
+bool cxx::rgc_replace_edge(
+    long id,
+    char const *result_name,
+    char const *recipient_name,
+    int w_1,
+    int w_2,
+    char const *donor_name,
+    int v_1,
+    int v_2
+) {
+    graph_collection_t *collection = find_collection(id);
+    if (!is_valid_graph_name(result_name) || collection == nullptr) {
+        return false;
+    }
+    graph_t *recipient = find_graph(*collection, recipient_name);
+    graph_t *donor = find_graph(*collection, donor_name);
+    if (recipient == nullptr || donor == nullptr) {
+        return false;
+    }
+
+    const edge_levels_t &recipient_levels = std::get<EDGE_LEVELS>(*recipient);
+    auto replaced_edge = recipient_levels.find(make_edge(w_1, w_2));
+    if (replaced_edge == recipient_levels.end()) {
+        return false;
+    }
+    const node_set_t &donor_nodes = std::get<NODES>(*donor);
+    const edge_levels_t &donor_levels = std::get<EDGE_LEVELS>(*donor);
+
+    if (v_1 == v_2 || !donor_nodes.contains(v_1) || !donor_nodes.contains(v_2)) {
+        return false;
+    }
+
+    level_t new_level = std::max(graph_level(*donor), replaced_edge->second) + 1;
+
+    if (!donor_levels.empty() && new_level >= LEVEL_MAX) {
+        return false;
+    }
+
+    if (std::get<NODES>(*recipient).size() + donor_nodes.size() - 2 > INT_MAX) {
+        return false;
+    }
+
+    graph_t result = *recipient;
+    erase_edge(result, w_1, w_2);
+    node_set_t &result_nodes = std::get<NODES>(result);
+    node_mapping_t donor_to_result{{v_1, w_1}, {v_2, w_2}};
+    node_t candidate = 0;
+    for (node_t node : donor_nodes) {
+        if (node == v_1 || node == v_2) {
+            continue;
+        }
+        candidate = take_free_node(result_nodes, candidate);
+        donor_to_result.emplace(node, candidate);
+        ++candidate;
+    }
+    for (const edge_t &edge : donor_levels | std::views::keys) {
+        insert_edge(result, donor_to_result.at(edge.first), donor_to_result.at(edge.second), new_level);
+    }
+
+    return collection->try_emplace(result_name, std::move(result)).second;
 }
 
 // Returns the level of edge {x, y} in the specified graph. Returns -1 if
