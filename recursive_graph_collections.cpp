@@ -205,12 +205,12 @@ char const *cxx::rgc_first_graph(long id) {
 // or collection exists.
 char const *cxx::rgc_next_graph(long id, char const *name) {
     graph_collection_t *collection = find_collection(id);
-    if (collection != nullptr && name) {
-        auto next = collection->upper_bound(name);
-        return (next == collection->end()) ? nullptr : next->first.c_str();
+    if (collection == nullptr || find_graph(*collection, name) == nullptr) {
+        return nullptr;
     }
 
-    return nullptr;
+    auto next = collection->upper_bound(name);
+    return (next == collection->end()) ? nullptr : next->first.c_str();
 }
 
 // Gives the number of graphs in the collection with specified id. Returns -1
