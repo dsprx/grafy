@@ -191,7 +191,7 @@ bool cxx::rgc_new_graph(long id, char const *name, int n) {
 // or no such collection exist, then the function does nothing.
 void cxx::rgc_delete_graph(long id, char const *name) {
     graph_collection_t *collection = find_collection(id);
-    if (collection != nullptr && name) {
+    if (collection != nullptr && name != nullptr) {
         collection->erase(name);
     }
 }
@@ -311,7 +311,7 @@ bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
         return false;
     }
 
-    node_set_t &nodes = std::get<NODES>(*graph);
+    const node_set_t &nodes = std::get<NODES>(*graph);
     if (!nodes.contains(x) || !nodes.contains(y)) {
         return false;
     }
