@@ -409,7 +409,12 @@ bool cxx::rgc_replace_edge(
         return false;
     }
 
-    graph_t result = *recipient;
+    auto [result_iter, inserted] = collection->try_emplace(result_name, *recipient);
+    if (!inserted) {
+        return false;
+    }
+    graph_t &result = result_iter->second;
+
     erase_edge(result, w_1, w_2);
     node_set_t &result_nodes = std::get<NODES>(result);
     node_mapping_t donor_to_result{{v_1, w_1}, {v_2, w_2}};
@@ -426,7 +431,7 @@ bool cxx::rgc_replace_edge(
         insert_edge(result, donor_to_result.at(edge.first), donor_to_result.at(edge.second), new_level);
     }
 
-    return collection->try_emplace(result_name, std::move(result)).second;
+    return true;
 }
 
 // Returns the level of edge {x, y} in the specified graph. Returns -1 if
