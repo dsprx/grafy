@@ -23,13 +23,13 @@ using node_t = int;
 using level_t = std::size_t;
 using edge_t = std::pair<node_t, node_t>; // {min, max}
 using node_set_t = std::set<node_t>;
-using adjacency_t = std::map<node_t, node_set_t>; // neighbours saved in both directions
-using edge_levels_t = std::map<edge_t, level_t>;  // level of each edge, one entry per edge
+using adjacency_t = std::map<node_t, node_set_t>; // Neighbours saved in both directions; nodes without neighbours have no entry.
+using edge_levels_t = std::map<edge_t, level_t>;  // Level of each edge, one entry per edge.
 using graph_t = std::tuple<node_set_t, adjacency_t, edge_levels_t>;
 using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
 using collections_t = std::unordered_map<long, graph_collection_t>;
 
-// indices for use with std::get on graph_t tuple
+// Indices for use with std::get on graph_t tuple.
 constexpr std::size_t NODES{0uz}, ADJACENCY{1uz}, EDGE_LEVELS{2uz};
 constexpr level_t BASE_LEVEL{0uz};
 
@@ -38,6 +38,8 @@ collections_t &collections() {
     return all_collections;
 }
 
+// Checks whether name is a valid graph name: non-empty and consisting only
+// of English letters, digits and underscores. Returns false for nullptr.
 bool is_valid_graph_name(char const *name) {
     if (name == nullptr) {
         return false;
@@ -52,8 +54,8 @@ bool is_valid_graph_name(char const *name) {
     });
 }
 
-// helper function for finding collection,
-// returns nullptr on failure
+// Helper function for finding collection,
+// Returns nullptr on failure.
 graph_collection_t *find_collection(long id) {
     auto &all_collections = collections();
     auto iter = all_collections.find(id);
@@ -63,8 +65,8 @@ graph_collection_t *find_collection(long id) {
     return &iter->second;
 }
 
-// helper functions for finding graph,
-// returns nullptr on failure
+// Helper functions for finding graph,
+// Returns nullptr on failure.
 graph_t *find_graph(graph_collection_t &collection, char const *name) {
     if (name == nullptr) {
         return nullptr;
@@ -88,8 +90,8 @@ edge_t make_edge(node_t x, node_t y) {
     return {std::min(x, y), std::max(x, y)};
 }
 
-// inserts edge with given level, assumes x != y, and both nodes exist
-// returns false if edge exists
+// Inserts edge with given level, assumes x != y, and both nodes exist.
+// Returns false if edge already exists.
 bool insert_edge(graph_t &graph, node_t x, node_t y, level_t level) {
     auto &[nodes, adjacency, edge_levels] = graph;
     auto [iter, inserted] = edge_levels.emplace(make_edge(x, y), level);
@@ -101,8 +103,8 @@ bool insert_edge(graph_t &graph, node_t x, node_t y, level_t level) {
     return true;
 }
 
-// erases y from x's neighbours
-// if x's neighbours is empty after erasing, removes x's entry
+// Erases y from x's neighbours. Assumes x has an entry.
+// If x's neighbours is empty after erasing, removes x's entry.
 void erase_neighbour(adjacency_t &adj, node_t x, node_t y) {
     auto iter = adj.find(x);
     iter->second.erase(y);
@@ -111,8 +113,8 @@ void erase_neighbour(adjacency_t &adj, node_t x, node_t y) {
     }
 }
 
-// deletes edge {x,y}
-// returns false if edge did not exist
+// Deletes edge {x,y}.
+// Returns false if edge did not exist.
 bool erase_edge(graph_t &graph, node_t x, node_t y) {
     auto &[nodes, adjacency, edge_levels] = graph;
     if (edge_levels.erase(make_edge(x, y)) == 0) {
@@ -123,7 +125,7 @@ bool erase_edge(graph_t &graph, node_t x, node_t y) {
     return true;
 }
 
-// returns biggest edge_level or BASE_LEVEL if no edges
+// Returns biggest edge_level or BASE_LEVEL if no edges.
 level_t graph_level(const graph_t &graph) {
     const auto &edge_levels = std::get<EDGE_LEVELS>(graph);
     if (edge_levels.empty()) {
@@ -132,7 +134,8 @@ level_t graph_level(const graph_t &graph) {
     return std::ranges::max(edge_levels | std::views::values);
 }
 
-// inserts smallest number >= candidate into the set that is not present in it
+// Inserts the smallest number >= candidate into the set that
+// is not present in it and returns it.
 node_t take_free_node(node_set_t &nodes, node_t candidate) {
     auto iter = nodes.lower_bound(candidate);
     while (iter != nodes.end() && *iter == candidate) {
@@ -162,12 +165,15 @@ void cxx::rgc_delete_collection(long id) {
     collections().erase(id);
 }
 
+// Creates graph 'name' with n isolated nodes numbered 0..n-1 in the collection
+// with the specified id. Returns false if the collection doesn't exist, the name
+// is invalid or already taken, or n is negative.
 bool cxx::rgc_new_graph(long id, char const *name, int n) {
-    auto collection_iter = collections().find(id);
-    if (!is_valid_graph_name(name) || n < 0 || collection_iter == collections().end()) {
+    graph_collection_t *collection = find_collection(id);
+    if (!is_valid_graph_name(name) || n < 0 || collection == nullptr) {
         return false;
     }
-    auto [graph_iter, inserted] = collection_iter->second.try_emplace(name);
+    auto [graph_iter, inserted] = collection->try_emplace(name);
     if (!inserted) {
         return false;
     }
@@ -185,7 +191,7 @@ bool cxx::rgc_new_graph(long id, char const *name, int n) {
 // or no such collection exist, then the function does nothing.
 void cxx::rgc_delete_graph(long id, char const *name) {
     graph_collection_t *collection = find_collection(id);
-    if (collection != nullptr && name) {
+    if (collection != nullptr && name != nullptr) {
         collection->erase(name);
     }
 }
@@ -205,12 +211,16 @@ char const *cxx::rgc_first_graph(long id) {
 // or collection exists.
 char const *cxx::rgc_next_graph(long id, char const *name) {
     graph_collection_t *collection = find_collection(id);
-    if (collection == nullptr || find_graph(*collection, name) == nullptr) {
+    if (collection == nullptr || name == nullptr) {
         return nullptr;
     }
+    auto iter = collection->find(name);
+    if (iter == collection->end()) {
+        return nullptr;
+    }
+    ++iter;
 
-    auto next = collection->upper_bound(name);
-    return (next == collection->end()) ? nullptr : next->first.c_str();
+    return (iter == collection->end()) ? nullptr : iter->first.c_str();
 }
 
 // Gives the number of graphs in the collection with specified id. Returns -1
@@ -221,7 +231,7 @@ ssize_t cxx::rgc_size(long id) {
 }
 
 // Creates a new node with the smallest free number in the specified graph.
-// Returns the number of the created node or -1 if the graph does not exist.
+// Returns the number of the created node or -1 if the graph does not exist or has INT_MAX nodes.
 int cxx::rgc_graph_new_node(long id, char const *name) {
     graph_t *graph = find_graph(id, name);
     if (graph == nullptr) {
@@ -288,6 +298,9 @@ int cxx::rgc_next_node(long id, char const *name, int x) {
     return (next == nodes.end()) ? -1 : *next;
 }
 
+// Adds edge {x, y} with the base level to the specified graph. Returns false
+// if the graph doesn't exist, x == y, one of the nodes doesn't exist or
+// the edge already exists.
 bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
     if (x == y) {
         return false;
@@ -298,7 +311,7 @@ bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
         return false;
     }
 
-    node_set_t &nodes = std::get<NODES>(*graph);
+    const node_set_t &nodes = std::get<NODES>(*graph);
     if (!nodes.contains(x) || !nodes.contains(y)) {
         return false;
     }
@@ -306,6 +319,8 @@ bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
     return insert_edge(*graph, x, y, BASE_LEVEL);
 }
 
+// Deletes edge {x, y} from the specified graph. Returns false if the graph
+// or the edge doesn't exist.
 bool cxx::rgc_graph_delete_edge(long id, char const *name, int x, int y) {
     graph_t *graph = find_graph(id, name);
     if (graph == nullptr) {
@@ -370,10 +385,13 @@ ssize_t cxx::rgc_graph_level(long id, char const *name) {
     return static_cast<ssize_t>(graph_level(*graph));
 }
 
+// Returns the max allowed edge level, i.e. LEVEL_MAX - 1.
 ssize_t cxx::rgc_max_level() {
     return LEVEL_MAX - 1;
 }
 
+// Returns the number of nodes in the specified graph. Returns -1 if
+// the graph does not exist.
 ssize_t cxx::rgc_count_nodes(long id, char const *name) {
     graph_t *graph = find_graph(id, name);
     if (graph == nullptr) {
