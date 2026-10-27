@@ -223,54 +223,66 @@ ssize_t cxx::rgc_size(long id) {
 // Creates a new node with the smallest free number in the specified graph.
 // Returns the number of the created node or -1 if the graph does not exist.
 int cxx::rgc_graph_new_node(long id, char const *name) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    std::set<node_t> &nodes = collections()[id][name].first;
+    node_set_t &nodes = std::get<NODES>(*graph);
 
     if (nodes.size() >= INT_MAX) {
         return -1;
     }
 
-    node_t expected = 0;
-    for (node_t node : nodes) {
-        if (node != expected) {
-            break;
-        }
-
-        expected++;
-    }
-
-    nodes.emplace(expected);
-    return expected;
+    return take_free_node(nodes, 0);
 }
 
-// Deletes a node in the specified graph. Returns true iff the graph
-// exists and a deletion was performed.
+// Deletes node x together with all its incident edges. Returns true iff
+// the graph exists and has node x.
 bool cxx::rgc_graph_delete_node(long id, char const *name, int x) {
-    return graph_exists(id, name) && (collections()[id][name].first.erase(x) > 0);
+    graph_t *graph = find_graph(id, name);
+    if (graph==nullptr) {
+        return false;
+    }
+
+    auto &[nodes, adjacency, edge_levels] = *graph;
+    if (nodes.erase(x) == 0) {
+        return false;
+    }
+
+    auto neighbours = adjacency.find(x);
+    if (neighbours != adjacency.end()) {
+        for (node_t y : neighbours->second) {
+            erase_neighbour(adjacency, y, x);
+            edge_levels.erase(make_edge(x, y));
+        }
+        adjacency.erase(neighbours);
+    }
+
+    return true;
 }
 
 // Gives the number of the first node in a specified graph. Returns -1 if
 // the graph is empty or does not exist.
 int cxx::rgc_first_node(long id, char const *name) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    const std::set<node_t> &nodes = collections()[id][name].first;
+    const node_set_t &nodes = std::get<NODES>(*graph);
     return (nodes.empty()) ? -1 : *nodes.begin();
 }
 
 // Gives the first node with a number bigger than 'x' in the specified graph.
 // Returns -1 if either the graph or the node don't exist.
 int cxx::rgc_next_node(long id, char const *name, int x) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    std::set<node_t> &nodes = collections()[id][name].first;
+    const node_set_t &nodes = std::get<NODES>(*graph);
     auto next = nodes.upper_bound(x);
 
     return (next == nodes.end()) ? -1 : *next;
@@ -366,7 +378,11 @@ ssize_t cxx::rgc_max_level() {
 }
 
 ssize_t cxx::rgc_count_nodes(long id, char const *name) {
-    return graph_exists(id, name) ? collections()[id][name].first.size() : -1;
+    graph_t *graph = find_graph(id, name);
+    if (graph==nullptr) {
+        return -1;
+    }
+    return static_cast<sszite_t>(std::get<NODES>(*graph).size());
 }
 
 ssize_t cxx::rgc_count_edges(long id, char const *name) {
