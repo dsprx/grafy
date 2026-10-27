@@ -23,8 +23,10 @@ using node_t = int;
 using level_t = std::size_t;
 using edge_t = std::pair<node_t, node_t>; // {min, max}
 using node_set_t = std::set<node_t>;
-using adjacency_t = std::map<node_t, node_set_t>; // Neighbours saved in both directions; nodes without neighbours have no entry.
-using edge_levels_t = std::map<edge_t, level_t>;  // Level of each edge, one entry per edge.
+// Neighbours saved in both directions; nodes without neighbours have no entry.
+using adjacency_t = std::map<node_t, node_set_t>;
+// Level of each edge, one entry per edge.
+using edge_levels_t = std::map<edge_t, level_t>;
 using graph_t = std::tuple<node_set_t, adjacency_t, edge_levels_t>;
 using graph_collection_t = std::map<std::string, graph_t, std::less<>>;
 using collections_t = std::unordered_map<long, graph_collection_t>;
@@ -232,7 +234,8 @@ ssize_t cxx::rgc_size(long id) {
 }
 
 // Creates a new node with the smallest free number in the specified graph.
-// Returns the number of the created node or -1 if the graph does not exist or has INT_MAX nodes.
+// Returns the number of the created node or -1 if the graph does not
+// exist or has INT_MAX nodes.
 int cxx::rgc_graph_new_node(long id, char const *name) {
     graph_t *graph = find_graph(id, name);
     if (graph == nullptr) {
@@ -375,8 +378,7 @@ bool cxx::rgc_replace_edge(
     int w_2,
     char const *donor_name,
     int v_1,
-    int v_2
-) {
+    int v_2) {
     graph_collection_t *collection = find_collection(id);
     if (!is_valid_graph_name(result_name) || collection == nullptr) {
         return false;
@@ -428,7 +430,8 @@ bool cxx::rgc_replace_edge(
         ++candidate;
     }
     for (const edge_t &edge : donor_levels | std::views::keys) {
-        insert_edge(result, donor_to_result.at(edge.first), donor_to_result.at(edge.second), new_level);
+        insert_edge(result, donor_to_result.at(edge.first),
+                    donor_to_result.at(edge.second), new_level);
     }
 
     return true;
