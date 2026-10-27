@@ -241,7 +241,7 @@ int cxx::rgc_graph_new_node(long id, char const *name) {
 // the graph exists and has node x.
 bool cxx::rgc_graph_delete_node(long id, char const *name, int x) {
     graph_t *graph = find_graph(id, name);
-    if (graph==nullptr) {
+    if (graph == nullptr) {
         return false;
     }
 
@@ -289,88 +289,85 @@ int cxx::rgc_next_node(long id, char const *name, int x) {
 }
 
 bool cxx::rgc_graph_add_edge(long id, char const *name, int x, int y) {
-    if (!graph_exists(id, name)) {
+    if (x == y) {
         return false;
     }
 
-    edge_set_t &edge_set = collections()[id][name].second;
-    edge_t new_edge{std::min(x, y), std::max(x, y)};
-
-    if (edge_exists(edge_set, new_edge)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return false;
     }
 
-    edge_set.first[new_edge.first].emplace(new_edge.second);
-    edge_set.second.emplace(new_edge, 0);
-    return true;
+    node_set_t &nodes = std::get<NODES>(*graph);
+    if (!nodes.contains(x) || !nodes.contains(y)) {
+        return false;
+    }
+
+    return insert_edge(*graph, x, y, BASE_LEVEL);
 }
 
 bool cxx::rgc_graph_delete_edge(long id, char const *name, int x, int y) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return false;
     }
 
-    edge_set_t &edge_set = collections()[id][name].second;
-    edge_t edge{std::min(x, y), std::max(x, y)};
-
-    if (!edge_exists(edge_set, edge)) {
-        return false;
-    }
-
-    edge_set.first[edge.first].erase(edge.second);
-    if (edge_set.first[edge.first].empty()) {
-        edge_set.first.erase(edge.first);
-    }
-
-    edge_set.second.erase(edge);
-    return true;
+    return erase_edge(*graph, x, y);
 }
 
+// Returns the smallest neighbour of node x in the specified graph. Returns -1
+// if the graph does not exist or x has no neighbours.
 int cxx::rgc_first_edge(long id, char const *name, int x) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    auto &adj_map = collections()[id][name].second.first;
-
-    if (!adj_map.contains(x) || adj_map[x].empty()) {
-        return -1;
-    }
-
-    return *adj_map[x].begin();
+    const adjacency_t &adjacency = std::get<ADJACENCY>(*graph);
+    auto neighbours = adjacency.find(x);
+    return (neighbours == adjacency.end()) ? -1 : *neighbours->second.begin();
 }
 
+// Returns the smallest neighbour of node x greater than y in the specified
+// graph. Returns -1 if the graph does not exist or there is no such neighbour.
 int cxx::rgc_next_edge(long id, char const *name, int x, int y) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    auto &adj_map = collections()[id][name].second.first;
-    if (!adj_map.contains(x)) {
+    const adjacency_t &adjacency = std::get<ADJACENCY>(*graph);
+    auto neighbours = adjacency.find(x);
+    if (neighbours == adjacency.end()) {
         return -1;
     }
 
-    auto next = adj_map[x].upper_bound(y);
-    return (next == adj_map[x].end()) ? -1 : *next;
+    auto next = neighbours->second.upper_bound(y);
+    return (next == neighbours->second.end()) ? -1 : *next;
 }
 
+// Returns the level of edge {x, y} in the specified graph. Returns -1 if
+// the graph or the edge does not exist.
 ssize_t cxx::rgc_edge_level(long id, char const *name, int x, int y) {
-    if (!graph_exists(id, name)) {
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
         return -1;
     }
 
-    const edge_set_t &edge_set = collections()[id][name].second;
-    const edge_t &edge = {std::min(x, y), std::max(x, y)};
-
-    if (!edge_exists(edge_set, edge)) {
-        return -1;
-    }
-
-    return edge_set.second[edge];
+    const edge_levels_t &edge_levels = std::get<EDGE_LEVELS>(*graph);
+    auto edge = edge_levels.find(make_edge(x, y));
+    return (edge == edge_levels.end()) ? -1 : static_cast<ssize_t>(edge->second);
 }
 
+// Returns the level of the specified graph (the maximal level of its edges,
+// or 0 if it has no edges). Returns -1 if the graph does not exist.
 ssize_t cxx::rgc_graph_level(long id, char const *name) {
-    return 0; // stub
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
+        return -1;
+    }
+
+    return static_cast<ssize_t>(graph_level(*graph));
 }
 
 ssize_t cxx::rgc_max_level() {
@@ -379,12 +376,19 @@ ssize_t cxx::rgc_max_level() {
 
 ssize_t cxx::rgc_count_nodes(long id, char const *name) {
     graph_t *graph = find_graph(id, name);
-    if (graph==nullptr) {
+    if (graph == nullptr) {
         return -1;
     }
-    return static_cast<sszite_t>(std::get<NODES>(*graph).size());
+    return static_cast<ssize_t>(std::get<NODES>(*graph).size());
 }
 
+// Returns the number of edges in the specified graph. Returns -1 if
+// the graph does not exist.
 ssize_t cxx::rgc_count_edges(long id, char const *name) {
-    return 0; // stub
+    graph_t *graph = find_graph(id, name);
+    if (graph == nullptr) {
+        return -1;
+    }
+
+    return static_cast<ssize_t>(std::get<EDGE_LEVELS>(*graph).size());
 }
