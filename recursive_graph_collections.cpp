@@ -370,15 +370,9 @@ int cxx::rgc_next_edge(long id, char const *name, int x, int y) {
 // get level max(donor level, replaced edge level) + 1. Returns false if any
 // graph or node is missing, the result name is invalid or taken, or the result
 // would exceed the maximal level or INT_MAX nodes.
-bool cxx::rgc_replace_edge(
-    long id,
-    char const *result_name,
-    char const *recipient_name,
-    int w_1,
-    int w_2,
-    char const *donor_name,
-    int v_1,
-    int v_2) {
+bool cxx::rgc_replace_edge(long id, char const *result_name,
+                           char const *recipient_name, int w_1, int w_2,
+                           char const *donor_name, int v_1, int v_2) {
     graph_collection_t *collection = find_collection(id);
     if (!is_valid_graph_name(result_name) || collection == nullptr) {
         return false;
