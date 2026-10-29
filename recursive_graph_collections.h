@@ -35,7 +35,7 @@ namespace cxx {
 
 	int rgc_next_edge(long id, char const *name, int x, int y);
 
-    bool cxx::rgc_replace_edge(long id, char const *result_name,
+    bool rgc_replace_edge(long id, char const *result_name,
                                char const *recipient_name, int w_1, int w_2,
                                char const *donor_name, int v_1, int v_2);
 
